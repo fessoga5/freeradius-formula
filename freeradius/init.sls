@@ -9,6 +9,7 @@ freeradius_pkg:
       - freeradius
       - freeradius-utils
       - freeradius-mysql
+      #- freeradius-postgresql
       - libfreeradius-client2
 
 freeradius:
@@ -30,5 +31,24 @@ freeradius:
     - source: salt://freeradius/files/{{file.template}}
     - context:
         configname: {{file.name}}
+{% endfor %}
+{% endif %}
+
+#SITES-ENABLED
+{%- if freeradius.sites_enabled is defined %}
+{%- for site in freeradius.get("sites_enabled","") %}
+"{{ freeradius.path }}sites-enabled/{{site}}":
+  file.symlink:
+    - target: {{freeradius.path}}sites-available/{{ site }}
+{%- endfor %}
+{%- endif %}
+
+#PRIVATE_FILE
+{%- if freeradius.private_files is defined %}
+{%- for file in freeradius.get("private_files","") %}
+"{{ freeradius.path }}{{ file }}":
+  file.managed:
+    - mode: 640
+    - source: salt://freeradius/private/{{ file }}
 {% endfor %}
 {% endif %}
