@@ -1,12 +1,21 @@
 # vim: sts=2 ts=2 sw=2 et ai
 {% set freeradius  = salt['grains.filter_by']({
   'Debian': {
-    'path': '/etc/freeradius/'
+    'path': '/etc/freeradius/',
+    'name': 'freeradius',
+    'user': 'freerad',
+    'group': 'freerad'
   },
   'FreeBSD': {
-    'path': '/usr/local/etc/raddb/'
+    'path': '/usr/local/etc/raddb/',
+    'name': 'radiusd',
+    'user': 'freeradius',
+    'group': 'freeradius',
   },
   'default': {
-    'path': '/etc/freeradius/'
+    'path': '/etc/freeradius/',
+    'name': 'freeradius',
+    'user': 'freeradius',
+    'group': 'freeradius',
   },
 }, merge=salt['pillar.get']('freeradius')) %}

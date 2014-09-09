@@ -20,8 +20,15 @@ freeradius:
     #- watch:
      # - file: /sr/local/etc/mpd5/mpd.conf
      
-"{{ freeradius.path }}sql.conf":
+#CREATE CONFIG FILES
+{%- if freeradius.create_files is defined %}
+{%- for file in freeradius.get("create_files","") %}
+"{{ freeradius.path }}{{ file.name }}":
   file.managed:
     - mode: 640
-    - source: salt://freeradius/files/sql.conf
     - template: jinja
+    - source: salt://freeradius/files/{{file.template}}
+    - context:
+        configname: {{file.name}}
+{% endfor %}
+{% endif %}
