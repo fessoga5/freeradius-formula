@@ -1,0 +1,12 @@
+# vim: sts=2 ts=2 sw=2 et ai
+{% set freeradius  = salt['grains.filter_by']({
+  'Debian': {
+    'path': '/etc/freeradius/'
+  },
+  'FreeBSD': {
+    'path': '/usr/local/etc/raddb/'
+  },
+  'default': {
+    'path': '/etc/freeradius/'
+  },
+}, merge=salt['pillar.get']('freeradius')) %}
