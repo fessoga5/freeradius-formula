@@ -52,3 +52,4 @@ freeradius:
     - source: salt://freeradius/private/{{ file }}
 {% endfor %}
 {% endif %}
+
