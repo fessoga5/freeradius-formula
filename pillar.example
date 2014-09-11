@@ -1,0 +1,130 @@
+# EXAMPLE ONLY
+# vim: sts=2 ts=2 sw=2 et ai
+freeradius:
+  create_files:
+    - name: radiusd.conf
+      template: radiusd.conf
+    - name: sql.conf
+      template: sql.conf
+    - name: clients.conf
+      template: clients.conf
+    - name: "sites-available/default" 
+      template: "sites-available/default" 
+    - name: "dictionary" 
+      template: "dictionary" 
+    - name: "sqlippool-instance2-reserv.conf"
+      template: sqlippool.conf
+  private_files:
+    - "modules/sql-local_log"
+    - "modules/sql-main_log"
+    - "modules/attr_rewrite"
+    - "dictionary.mpd"
+    - "dictionary.dlink"
+    - "sql/mysql/ippool.conf"
+  sites_enabled:
+    - control-socket
+    - default
+  dictionary:
+    include:
+      - "$INCLUDE  dictionary.mpd"
+      - "$INCLUDE  dictionary.dlink"
+  clients.conf:
+    - name: localhost 
+      ipaddr: 127.0.0.1 
+      netmask: 32 
+      secret: pass 
+      shortname: local-server 
+  "sites-available/default":
+    authorize:
+      - preprocess
+      - |
+        if("%{request:User-Name}"=~/^([0-9]{5,})@(.*)/){
+          if("%{2}"=="test"){
+            update request{
+              User-Name:="%{1}"
+              Realm:="%{2}"
+            }
+          } 
+        }
+      - redundant_sql
+      - pap
+    authenticate:
+      - |
+        Auth-Type PAP {
+          pap
+        }
+    preacct:
+      - preprocess
+      - acct_unique
+    accounting:
+      - redundant_sql_with_log
+      - sql-main_log 
+      - |
+        if(noop){
+          ok
+        }
+    session:
+      - redundant_sql
+    post-auth:
+      - |
+        if("%{request:Realm}"=="test"){
+          update request{
+            User-Name:="%{User-Name}@%{Realm}"
+          } 
+          sql1 
+        }
+        else{
+          redundant_sqlippool
+        }
+      - |
+        if("%{Calling-Station-Id}"){
+          redundant_sql_with_log
+          sql-main_log
+        }
+      - substitute-mpd-tables
+      - |
+        Post-Auth-Type REJECT{
+          sql1 
+          attr_filter.access_reject
+        } 
+  sql.conf:
+    user: radius
+    passwd: "12345" 
+    server: "127.0.0.1"
+    include:
+      - "sql_log"
+  radiusd.conf:
+    listen:
+      - type: auth
+        ipaddr: 127.0.0.1 
+        port: 0
+      - type: acct
+        ipaddr: 127.0.0.1 
+        port: 0
+    proxy_requests: no
+    modules:
+      - "$INCLUDE sql/mysql/counter.conf"
+    instantiate:
+      options:
+        - expiration
+      redundants:
+        - name: redundant_sql_with_log
+          group:
+            - - sql1
+              - sql_log
+            - - sql2
+              - sql-local_log
+        - name: redundant_sql
+          options:
+            - sql1
+            - sql2
+        - name: redundant_sqlippool
+          group:
+            - - |
+                if ( "%{sql1:SELECT count(*) FROM radippool r, srvgroups s WHERE (r.expiry_time<NOW() OR r.expiry_time IS NULL) AND s.group_id=r.group_id AND s.pool_name='%{NAS-IP-Address}'}" ) {
+                  sqlippool1
+                }
+                else {
+                  sqlippool2_reserv
+                }
+            - - sqlippool2 
