@@ -2,24 +2,25 @@
 # vim: sts=2 ts=2 sw=2 expandtab autoindent
 {% from "freeradius/map.jinja" import freeradius with context %}
 
-
+#INSTALL FREERADIUS PACKAGES
 freeradius_pkg:
   pkg.installed:
     - pkgs:
       - freeradius
       - freeradius-utils
       - freeradius-mysql
-      #- freeradius-postgresql
+      - freeradius-postgresql
       - libfreeradius-client2
 
+#SERVICE MGMT
 freeradius:
   pkg:
     - installed
   service:
     - running
     - enable: True
-    #- watch:
-     # - file: /sr/local/etc/mpd5/mpd.conf
+    - watch:
+      - file: "{{ freeradius.path}}radiusd.conf" 
      
 #CREATE CONFIG FILES
 {%- if freeradius.create_files is defined %}
